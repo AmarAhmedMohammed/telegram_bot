@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Telegram → Website Mirror</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      padding: 20px;
+    }
+    .container { max-width: 700px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 20px; color: #1da1f2; }
+    .post {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .text { margin-bottom: 8px; line-height: 1.5; }
+    .media { margin-top: 10px; text-align: center; }
+    .media img, .media video { max-width: 100%; border-radius: 8px; }
+    .timestamp {
+      font-size: 0.8em;
+      color: #888;
+      text-align: right;
+    }
+    .loading { text-align: center; color: #666; margin: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Live from Telegram</h1>
+    <div id="posts"><p class="loading">Loading posts...</p></div>
+  </div>
+
+  <script>
+    const postsContainer = document.getElementById('posts');
+
+    async function loadPosts() {
+      try {
+        const res = await fetch('/api/posts');
+        const posts = await res.json();
+
+        if (posts.length === 0) {
+          postsContainer.innerHTML = '<p class="loading">No posts yet. Send a message to your bot!</p>';
+          return;
+        }
+
+        postsContainer.innerHTML = posts.map(post => `
+          <div class="post">
+            <div class="text">${escapeHtml(post.text)}</div>
+            ${post.mediaUrl ? `
+              <div class="media">
+                ${post.mediaUrl.endsWith('.mp4') || post.mediaUrl.includes('video') 
+                  ? `<video controls><source src="${post.mediaUrl}" type="video/mp4"></video>`
+                  : `<img src="${post.mediaUrl}" alt="Media">`
+                }
+              </div>
+            ` : ''}
+            <div class="timestamp">${formatTime(post.timestamp)}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        postsContainer.innerHTML = '<p class="loading">Error loading posts.</p>';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTime(iso) {
+      return new Date(iso).toLocaleString();
+    }
+
+    // Load immediately & every 15 seconds
+    loadPosts();
+    setInterval(loadPosts, 15000);
+  </script>
+</body>
+</html>

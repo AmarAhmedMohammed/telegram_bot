@@ -1,0 +1,14 @@
+{
+  "name": "telegram-mirror",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
+    "fs-extra": "^11.0.0",
+    "node-telegram-bot-api": "^0.64.0"
+  }
+}
