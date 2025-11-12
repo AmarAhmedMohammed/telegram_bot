@@ -9,40 +9,34 @@ const token = process.env.BOT_TOKEN;
 const webhookUrl = process.env.WEBHOOK_URL;
 
 if (!token || !webhookUrl) {
-  console.error('Error: BOT_TOKEN and WEBHOOK_URL must be set in .env');
+  console.error('BOT_TOKEN and WEBHOOK_URL must be in .env');
   process.exit(1);
 }
 
 const bot = new TelegramBot(token);
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;   // Render sets process.env.PORT
 
-// Middleware
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// File to store posts
 const POSTS_FILE = path.join(__dirname, 'posts.json');
 
-// Initialize posts file
+// Ensure posts file exists
 fs.ensureFileSync(POSTS_FILE);
-if (!fs.existsSync(POSTS_FILE)) fs.writeJsonSync(POSTS_FILE, []);
+if (!fs.pathExistsSync(POSTS_FILE)) fs.writeJsonSync(POSTS_FILE, []);
 
-// Webhook endpoint
+// ---------- Webhook ----------
 app.post('/telegram-webhook', (req, res) => {
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
 
-// Handle incoming messages
+// ---------- Message handler ----------
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text || msg.caption || '[Media]';
   const timestamp = new Date().toISOString();
-
-  // Optional: Only allow your personal chat
-  // const ALLOWED_CHAT_ID = 123456789; // Replace with your Telegram user ID
-  // if (chatId !== ALLOWED_CHAT_ID) return;
 
   let mediaUrl = null;
   if (msg.photo) {
@@ -54,23 +48,14 @@ bot.on('message', async (msg) => {
     mediaUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
   }
 
-  // Load existing posts
+  // Load current posts
   let posts = [];
-  try {
-    posts = fs.readJsonSync(POSTS_FILE);
-  } catch (e) {
-    posts = [];
-  }
+  try { posts = fs.readJsonSync(POSTS_FILE); } catch (_) {}
 
   // Add new post
-  posts.unshift({
-    text,
-    mediaUrl,
-    timestamp,
-    chatId
-  });
+  posts.unshift({ text, mediaUrl, timestamp, chatId });
 
-  // Keep only last 50
+  // Keep last 50
   if (posts.length > 50) posts = posts.slice(0, 50);
 
   // Save
@@ -78,7 +63,7 @@ bot.on('message', async (msg) => {
   console.log('New post saved:', text);
 });
 
-// API: Get all posts
+// ---------- API ----------
 app.get('/api/posts', (req, res) => {
   try {
     const posts = fs.readJsonSync(POSTS_FILE);
@@ -88,16 +73,13 @@ app.get('/api/posts', (req, res) => {
   }
 });
 
-// Set webhook on startup
-bot.setWebHook(`${webhookUrl}`).then(() => {
-  console.log(`Webhook set to: ${webhookUrl}`);
-}).catch(err => {
-  console.error('Failed to set webhook:', err.message);
-});
+// ---------- Set webhook ----------
+bot.setWebHook(webhookUrl)
+  .then(() => console.log('Webhook set →', webhookUrl))
+  .catch(err => console.error('setWebHook error:', err.message));
 
-// Start server
+// ---------- Start ----------
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Visit: http://localhost:${PORT}`);
-  console.log(`Webhook: ${webhookUrl}`);
+  console.log(`Server listening on port ${PORT}`);
+  console.log(`Open: https://telegram-bot-2-e4v9.onrender.com`);
 });
